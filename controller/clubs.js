@@ -1,55 +1,102 @@
-const Club = require('../models/club')
+ const Club = require('../models/club')
+ var PDFPrinter = require('pdfmake');
+ const nodemailer = require('nodemailer');
 
-const getAllClubs = async (req, res) => {
 
-    const clubs = await Club.find();
+const getAll = async (req, res) => {
+  const clubs = await Club.find();
 
-    res.send({
-      error: false,
-      message: 'All clubs from the database',
-      clubs
-    });
+   res.render('clubs/index', { clubs });
+    
   };
 
-  const getClubCreate = async (req, res) => {
-    const club = await Club.create(req.body);
-
-    res.send({
-      error: false,
-      message: 'New club has been created',
-      club
-    });
+  const create = async (req, res) => {
+    res.render('clubs/create');
   };
 
-  const getClubUpdate = async (req, res) => {
-    await Club.findByIdAndUpdate(
-       req.params.id,
-         { $push: { player: req.body.player} },
-       req.body);
+  const getEdit = async (req, res) => {
     const club = await Club.findById(req.params.id);
 
-    res.send({
-      error: false,
-      message: `Club with id #${club._id} has been updated`,
-      club
-    });
+    res.render('clubs/edit', { club });
+  };
+  const print = async (req, res) => {
+
+    const club = await Club.findById(req.params.id).populate('players');
+
+    var fonts = {
+      Roboto: {
+            normal: 'fonts/Roboto-Regular.ttf',
+            bold: 'fonts/Roboto-Medium.ttf',
+            italics: 'fonts/Roboto-Italic.ttf',
+            bolditalics: 'fonts/Roboto-MediumItalic.ttf'
+      }
+    };
+
+    const printer = new PDFPrinter(fonts);
+    var fs = require('fs');
+
+    let pdfBody = [['Name', 'Position']];
+
+    club.players.forEach(player => {
+      pdfBody.push([`${player.first_name} ${player.last_name}`, player.position])
+    })
+  
+    var docDefinition = {
+          content: [
+                { text: `Club with id #${club._id}` },
+                { text: `Club name: ${club.name}` },
+                `Club country: ${club.county}`,
+                'Players:',
+                {
+                      table: {
+                            body: pdfBody
+                      }
+                }
+          ]
+    };
+  
+    var pdfDoc = printer.createPdfKitDocument(docDefinition);
+    pdfDoc.pipe(fs.createWriteStream('tables.pdf'));
+    pdfDoc.end();
+  
+    res.redirect(`/clubs/${club._id}/view`);
+
+  }
+
+  const getView = async (req, res) => {
+    const club = await Club.findById(req.params.id).populate('players');
+    console.log(club);
+    res.render('clubs/view', { club });
   };
 
-  const getClubsDeleted = async (req, res) => {
+  const postCreate = async (req, res) => {
+    console.log(req.body);
+    await Club.create(req.body);
+  
+    res.redirect('/clubs');
+  };
 
+  
+
+  const update = async (req, res) => {
+    await Club.findByIdAndUpdate(req.params.id, req.body);
+  
+    res.redirect('/clubs');
+  };
+  
+  const destroy = async (req, res) => {
     await Club.findByIdAndDelete(req.params.id);
-    
-    res.send({
-      error: false,
-      message: `Club with id #${req.params.id} has been deleted`
-    });
+  
+    res.status(200).send({});
   };
-
-
-
+  
 module.exports = {
-  getAllClubs,
-  getClubCreate,
-  getClubUpdate,
-  getClubsDeleted 
+  getAll,
+  create,
+  update,
+  getEdit,
+  print,
+  getView,
+  postCreate,
+  destroy
 }

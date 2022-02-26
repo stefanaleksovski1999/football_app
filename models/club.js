@@ -5,14 +5,6 @@ const clubSchema = mongoose.Schema({
       type: String,
       required: true
     },
-    players: {
-      ref: 'player',
-      type: Array
-    },
-    town: {
-      type: String,
-      required: true
-    },
     country: {
       type: String,
       required: true
@@ -21,8 +13,12 @@ const clubSchema = mongoose.Schema({
       type: String,
       required: true
     },
+    players: [{
+      type: mongoose.Types.ObjectId,
+      ref: 'player'
+    }]
 
    
   }, { timestamps: true });
   
-  module.exports = mongoose.model('Club', clubSchema);
+  module.exports = mongoose.model('club', clubSchema);
